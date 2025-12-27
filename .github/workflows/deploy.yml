@@ -1,0 +1,38 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Update Scripts
+        run: |
+          echo "🔄 Updating scripts..."
+          # Копіюємо з репозиторію в робочу папку (тепер вона та сама!)
+          # Оскільки Runner запускається всередині папки repo, нам треба просто скопіювати
+          # АЛЕ! Runner скачує код у свою папку actions-runner/_work/...
+          # Тому нам треба скопіювати з поточної директорії (.) у цільову
+          
+          TARGET_DIR="/home/ruban/my-projects/ruban-infra"
+          
+          cp ./scripts/*.sh $TARGET_DIR/scripts/
+          chmod +x $TARGET_DIR/scripts/*.sh
+          
+          # Оновлюємо docker-compose файли
+          cp ./services/nextcloud/docker-compose.yml $TARGET_DIR/services/nextcloud/
+          cp ./services/monitoring/docker-compose.yml $TARGET_DIR/services/monitoring/
+          # cp ./services/proxy/docker-compose.yml $TARGET_DIR/services/proxy/
+          
+          echo "✅ Files updated via CI/CD"
+
+      # Опціонально: Перезапуск контейнерів, якщо змінився compose файл
+      # - name: Restart Nextcloud if needed
+      #   run: |
+      #     cd /home/ruban/my-projects/ruban-infra/services/nextcloud
+      #     docker compose up -d
