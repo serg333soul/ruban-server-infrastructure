@@ -1,0 +1,79 @@
+services:
+  db:
+    image: mariadb:10.6
+    container_name: nextcloud_db
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+    networks:
+      - backend_network
+
+  redis:
+    image: redis:alpine
+    container_name: nextcloud_redis
+    restart: always
+    # Запускаємо Redis з вимогою пароля
+    command: redis-server --requirepass ${REDIS_HOST_PASSWORD}
+    networks:
+      - backend_network
+
+  app:
+    image: nextcloud:latest
+    container_name: nextcloud_app
+    restart: always
+    expose:
+      - 80
+    volumes:
+      - nextcloud_data:/var/www/html
+      # SSD монтується як ОСНОВНА папка даних.
+      # Nextcloud сам створить там папки користувачів (ruban, drujina...)
+      - /mnt/ssd_storage/nc_data:/var/www/html/data
+    environment:
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_HOST=db
+      - REDIS_HOST=redis
+      - REDIS_HOST_PASSWORD=${REDIS_HOST_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      # Довіряємо нашому Nginx Proxy (важливо для правильної роботи посилань)
+      - TRUSTED_PROXIES=172.16.0.0/12 192.168.0.0/16 10.0.0.0/8
+      - OVERWRITEPROTOCOL=http
+    depends_on:
+      - db
+      - redis
+    networks:
+      - backend_network
+      - global_proxy_net
+
+  cron:
+      image: nextcloud:latest
+      container_name: nextcloud_cron
+      restart: always
+      volumes:
+        - nextcloud_data:/var/www/html
+        # Той самий SSD, що і в основного додатка
+        - /mnt/ssd_storage/nc_data:/var/www/html/data
+      entrypoint: /cron.sh
+      depends_on:
+        - db
+        - redis
+      networks:
+        - backend_network
+
+networks:
+  backend_network: 
+    driver: bridge
+  global_proxy_net:
+    external: true
+
+volumes:
+  db_data:
+  nextcloud_data:

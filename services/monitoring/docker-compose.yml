@@ -1,0 +1,77 @@
+#version: '3.8'
+
+services:
+  # 1. Збирач метрик "заліза" (CPU, RAM, HDD)
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: monitoring_node_exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+    networks:
+      - monitoring_net
+
+  # 2. Збирач метрик Docker-контейнерів
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: monitoring_cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      #- /var/lib/docker/:/var/lib/docker:ro
+      - /var/snap/docker/common/var-lib-docker/:/var/lib/docker:ro
+    expose:
+      - 8080
+    networks:
+      - monitoring_net
+
+  # 3. База даних метрик
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    expose:
+      - 9090
+    networks:
+      - monitoring_net
+
+  # 4. Візуалізація (Дашборди)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring_grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring_net
+      - global_proxy_net  # Підключаємо до проксі, щоб зайти через браузер
+
+networks:
+  monitoring_net:
+    driver: bridge
+  global_proxy_net:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:

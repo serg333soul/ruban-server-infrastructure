@@ -1,0 +1,18 @@
+services:
+  app:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - global_proxy_net  # <-- Підключення до магістралі
+
+networks:
+  global_proxy_net:
+    external: true  # <-- Мережа створена вручну на Кроці 2

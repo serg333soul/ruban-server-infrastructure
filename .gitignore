@@ -1,0 +1,6 @@
+.env
+*.log
+.DS_Store
+nextcloud_data/
+mysql_data/
+monitoring_data/
