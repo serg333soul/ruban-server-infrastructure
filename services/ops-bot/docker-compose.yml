@@ -1,0 +1,9 @@
+services:
+  ops-bot:
+    build: .
+    container_name: ops_bot
+    restart: unless-stopped
+    # ОСЬ ЦЕ ГОЛОВНЕ:
+    env_file:
+      - /home/ruban/.config/server_secrets/telegram.env
+    pid: host
