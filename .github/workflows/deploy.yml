@@ -30,7 +30,26 @@ jobs:
           # cp ./services/proxy/docker-compose.yml $TARGET_DIR/services/proxy/
           
           echo "✅ Files updated via CI/CD"
-
+      - name: Deploy OpsBot
+        run: |
+          echo "🤖 Deploying OpsBot..."
+          TARGET_DIR="/home/ruban/my-projects/ruban-infra/services/ops-bot"
+          
+          # Створюємо папку, якщо немає
+          mkdir -p $TARGET_DIR
+          
+          # Копіюємо файли
+          cp ./services/ops-bot/Dockerfile $TARGET_DIR/
+          cp ./services/ops-bot/requirements.txt $TARGET_DIR/
+          cp ./services/ops-bot/main.py $TARGET_DIR/
+          cp ./services/ops-bot/docker-compose.yml $TARGET_DIR/
+          
+          # Перезбираємо і запускаємо бота
+          cd $TARGET_DIR
+          # --build змушує Docker перевстановити бібліотеки, якщо ми змінили requirements
+          docker compose up -d --build
+          
+          echo "✅ OpsBot deployed!"
       # Опціонально: Перезапуск контейнерів, якщо змінився compose файл
       # - name: Restart Nextcloud if needed
       #   run: |
